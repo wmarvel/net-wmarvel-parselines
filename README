@@ -1,0 +1,92 @@
+
+NET-WMARVEL-PARSELINES:
+
+    parselines is a generic line parsing package allowing for the conversion
+    of a line matching a pattern to a specific instance of a CLOS class.
+
+    It is used by defining a root class, and subclasses of that root class,
+    specifying patterns on the message to use when matching against a string.
+
+     If the first pattern in the specification matches the string being parsed,
+     an instance of that class will be instantiated and returned. 
+
+     For instance, an irc message may be defined as the following:
+     (defmsg irc-msg () ()
+      (:parse-specification
+       (original-line
+             "^:*(?<nick>\\S+)!(?<user>\\S+)@(?<host>\\S+) (?<messagedata>.*)$"
+             "^:*(?<host>\\S+) (?<messagedata>.*)$"
+             "^(?<messagedata>.*)$"
+       (messagedata "^(?<command>\\S+ (?<paramdata>.*)$" 
+        (:or (*command " " *paramdata)
+             (*command)))))
+
+    This defines a root class for the parser, with slots line, nick, user, host,
+    messagedata, and command data.
+
+    Other messages can be based on this message to define the lines that can
+    be parsed, as well as defining CLOS classes for those lines
+
+    When parsing, first it will look at the original-line binding
+    (which is filled by the parser automagically), and attempt to match
+    the patterns given. The parser basically works by walking the class tree,
+    attempting to match patterns, until it finds a more specific class with
+    patterns that match the current variable bindings. When it finds such a
+    class, it starts over, walking the subclasses - if no better match is found,
+    an instance is created, and slots filled according to the match bindings.
+    The first sublist in the :parse-specification option of defmsg is used to
+    determine whether or not a given line matches to a class of the message
+    type, the subsequent lists are used to fill out additional slots based
+    on the previous slots filled.
+
+    For example, in the above, a line matches an irc-msg if it matches the 
+    pattern:
+
+     <FIXME>
+    Once the slots are filled based on those patterns, the messagedata slot is
+    parsed further:
+
+     <FIXME>
+    If we added additional sublists, we could fill out additional slots based
+    on the command or paramdata slots.
+
+    Note that when a parser is created, the root meta-class for the protocol is
+    given to the parser:
+
+    (make-instance 'parser :rootclass 'irc-msg)
+
+    <FIXME : FORMATTING NOT YET SUPPORTED IN NEW VERSION>
+    Formatting a message reverses the parse, looking at the metaclass for
+    the class that is being formatted, using the patterns to determine which
+    slots to read, and filling the slot associated with the pattern, then 
+    doing the same for subclasses until the *line binding is filled.
+
+    Scorers may also be used when more control over exactly which pattern 
+    should be used when formatting a message 
+
+    For instance, in the case of IRC, we may want to prefer a pattern that uses
+    ':' over a pattern that does not:
+
+    (make-instance 'parser 
+                   :rootclass (findclass 'irc-msg) 
+                   :scorer #'(lambda ()
+                               (let ((score (default-scorer data pattern)))
+                                     (if (and (> score -1) 
+                                              (find #\: pattern)) 
+                                          (1+ score) 
+                                       score))))
+
+    This is a generic parsing package and can be used to parse in any
+    line-oriented context, it is not limited to parsing IRC messages.
+    It is also used, for instance, in the botcommands module, to parse 
+    commands given by the IRC user, and it can also be used to easily
+    parse and manipulate text files (e.g., delimited flat files)
+
+  PORTABILITY:
+
+    lineparse should be pretty easily portable. The only known
+    issue is that different lisps have different ideas about how
+    validate-superclass ought to work, and exactly what package
+    the method is defined in. The package is known to work ok
+    in SBCL, CMUCL, Lispworks and Allegro CL.
+
