@@ -176,7 +176,7 @@
   (stable-sort (copy-seq (class-direct-subclasses class))
 	       #'> :key #'hitcount))
 
-(defmethod update-class-ordering ((class standard-class)))
+(defmethod update-class-ordering ((class T)))
 
 (defmethod update-class-ordering ((class parser-class))
   (let ((sorted (sorted-subclasses class)))
